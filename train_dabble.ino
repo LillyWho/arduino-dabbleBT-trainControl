@@ -27,7 +27,7 @@ void setup() {
   pinMode(in2, OUTPUT);
 
   pinMode(ledPin1,OUTPUT);
-  Serial.begin(115200);
+  Serial.begin(9600);
   Dabble.begin(9600);
 }
 
@@ -58,11 +58,7 @@ void loop() {
   } else {
     digitalWrite(ledPin1,OFF);
   }
-  if (lightsOn) {
-    digitalWrite(13,1);
-  } else {
-    digitalWrite(13,0);
-  }
+  digitalWrite(13,doPuff); //just represent it via the internal LED for now
   
 }
 void mode0(float value) {
@@ -105,13 +101,14 @@ void modeDown(bool pressed) {
   mode = mode - 1;
 }
 void steamer(bool steam) {
-  if (!steam) {doPuff = false; lastPuff = 0; return 0;}
-   if (!doPuff && millis() - lastPuffOff > 2000) {
+  if (!steam) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;}
+   if (!doPuff && millis() - lastPuffOff > 5000) {
     doPuff = true;
-    lastPuffOff = millis();
+    lastPuff = millis();
   }
   if (doPuff && millis() - lastPuff > 2000) {
     doPuff = false;
-    lastPuff = millis()
+    lastPuffOff = millis();
   }
+  //Serial.print(doPuff);
 }
