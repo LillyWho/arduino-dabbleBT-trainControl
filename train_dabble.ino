@@ -106,11 +106,11 @@ void modeDown(bool pressed) {
 }
 void steamer(bool steam) {
   if (!steam) {doPuff = false; lastPuff = 0; return 0;}
-   if (!doPuff && millis() - lastPuffOff > variable) {
+   if (!doPuff && millis() - lastPuffOff > 2000) {
     doPuff = true;
     lastPuffOff = millis();
   }
-  if (doPuff && millis() - lastPuff > variable) {
+  if (doPuff && millis() - lastPuff > 2000) {
     doPuff = false;
     lastPuff = millis()
   }
