@@ -3,11 +3,12 @@
 #include <Dabble.h>
 
 const int ledPin1 = 5; //pin D2, wire to GND
+const int ledPin2 = 6;
 const int maxSpeed = 72;
 const int Motor1 = 10;
 const int in1 = 9;
 const int in2 = 8;
-const int puffPin = 5;
+const int puffPin = 4;
 const int smokeMode = 0; // CHANGEME: 0 = diesel with closely pulsed smoke, 1 = steam with either constant in idle or puffs per cylinder beat in motion
 static int mode = 0; // mode 0 = absolute analogue, mode 1 = real analogue throttle mode, mode 2 = d-pad incremental mode
 static float directionPlus = 0;
@@ -29,7 +30,8 @@ static int SquareDebounce = 0;
 static int TriangleDebounce = 0;
 static int XDebounce = 0;
 static int StartDebounce = 0;
-
+static long UpDebounce = 0;
+static long DownDebounce = 0;
 static long throttleTick = 0;
 
 
@@ -115,7 +117,7 @@ void mode1(bool mode1) {
   } else if (direction != 0 && throttleTick == 0) {
     throttleTick = millis();
     speed = speed + direction;
-  } else if (direction != 0 && millis() - throttleTick > 1000) {
+  } else if (direction != 0 && millis() - throttleTick > 800) {
     throttleTick = millis();
     speed = speed + direction;
   }
@@ -123,12 +125,26 @@ void mode1(bool mode1) {
 }
 void mode2(bool mode2) {
   if (!mode2) {return 0;}
-  if (emergencyBrake) {speed = 0; analogWrite(Motor1, speed); return;}
+  if (emergencyBrake) {speed = 0; analogWrite(Motor1, abs(speed)); return;}
   if (GamePad.isUpPressed() && speed < maxSpeed) {
-    speed = speed + 2;
-  } else if (GamePad.isDownPressed() && speed > 0) {
-    speed = speed - 2;
+    if (UpDebounce == 0) {
+      speed = speed + 2;
+      UpDebounce = millis();
+    } else if (millis() - UpDebounce > 850) {
+      speed = speed + 2;
+      UpDebounce = millis();
+    }
+  } else if (GamePad.isDownPressed() && speed > maxSpeed * -1) {
+    if (DownDebounce == 0) {
+      speed = speed - 2;
+      DownDebounce = millis();
+    } else if (millis() - DownDebounce > 850) {
+      speed = speed - 2;
+      DownDebounce = millis();
+    }
   }
+  if (!GamePad.isUpPressed()) {UpDebounce = 0;}
+  if (!GamePad.isDownPressed()) {DownDebounce = 0;}
   analogWrite(Motor1, abs(speed));
   if (speed > 0) {digitalWrite(in1,HIGH);digitalWrite(in2,LOW);} else if (speed < 0) {digitalWrite(in1,LOW); digitalWrite(in2,HIGH);}
 }
@@ -141,6 +157,7 @@ void modeDown() {
   mode = mode - 1;
 }
 void steamer(bool steam) {
+  //TODO: Steam engine timings
   if (!steam && smokeMode == 1) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;}
   if (!steam && smokeMode != 1) {return 0;}
 ///////////////////////////////////////////////////////////////////////////
@@ -156,22 +173,22 @@ void steamer(bool steam) {
 void diesel(bool steam) {
   if (!steam && smokeMode == 0) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;}
   if (!steam && smokeMode != 0) {return 0;}
-  interval = map(speed,0,maxSpeed,2,5);
+  interval = lerp(abs(speed),0,maxSpeed,20,110);
   if (speed == 0) { //idle smoke behaviour
-    if (!doPuff && millis() - lastPuffOff > 800) {
+    if (!doPuff && millis() - lastPuffOff > 250) {
     doPuff = true;
     lastPuff = millis();
     }
-    if (doPuff && millis() - lastPuff > 800) {
+    if (doPuff && millis() - lastPuff > 250) {
       doPuff = false;
       lastPuffOff = millis();
     }
-  } else if (speed > 0) {
-    if (!doPuff && millis() - lastPuffOff > 1000 + (interval * -1)) {
+  } else if (abs(speed) > 0) {
+    if (!doPuff && millis() - lastPuffOff > 250 + (interval * -1)) {
       doPuff = true;
       lastPuff = millis();
     }
-    if (doPuff && millis() - lastPuff > 1000 + (interval * -1)) {
+    if (doPuff && millis() - lastPuff > 250 + (interval * -1)) {
       doPuff = false;
       lastPuffOff = millis();
     }
