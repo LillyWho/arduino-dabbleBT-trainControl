@@ -13,3 +13,4 @@ Controls:
 - Square: Traction Control Mode Down
 - Circle: Headlights
 - Traction control for various modes should be self-explanatory
+- Cross: Emergency brake toggle. Sets speed to zero and blocks traction control until toggled again
