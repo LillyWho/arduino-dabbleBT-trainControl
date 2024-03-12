@@ -4,7 +4,12 @@
 
 const int ledPin1 = 5; //pin D2, wire to GND
 const int ledPin2 = 6;
-const int maxSpeed = 72;
+/* CHANGEME: 
+* I've limited the duty cycle in order to accomodate my use case of running a motor that can take a maximum of 4V, but if you intend to operate off a 12 or 24V power supply with a
+* motor that can take 12 or 24V, then you can simply set this to 100 in order to allow for a full range duty cycle.
+*/
+
+const int maxSpeed = 72; 
 const int Motor1 = 10;
 const int in1 = 9;
 const int in2 = 8;
@@ -128,18 +133,18 @@ void mode2(bool mode2) {
   if (emergencyBrake) {speed = 0; analogWrite(Motor1, abs(speed)); return;}
   if (GamePad.isUpPressed() && speed < maxSpeed) {
     if (UpDebounce == 0) {
-      speed = speed + 2;
+      speed = constrain(speed + 2,maxSpeed * -1, maxSpeed);
       UpDebounce = millis();
     } else if (millis() - UpDebounce > 850) {
-      speed = speed + 2;
+      speed = constrain(speed + 2,maxSpeed * -1, maxSpeed);
       UpDebounce = millis();
     }
   } else if (GamePad.isDownPressed() && speed > maxSpeed * -1) {
     if (DownDebounce == 0) {
-      speed = speed - 2;
+      speed = constrain(speed - 2,maxSpeed * -1, maxSpeed);
       DownDebounce = millis();
     } else if (millis() - DownDebounce > 850) {
-      speed = speed - 2;
+      speed = constrain(speed - 2,maxSpeed * -1, maxSpeed);
       DownDebounce = millis();
     }
   }
@@ -173,7 +178,7 @@ void steamer(bool steam) {
 void diesel(bool steam) {
   if (!steam && smokeMode == 0) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;}
   if (!steam && smokeMode != 0) {return 0;}
-  interval = lerp(abs(speed),0,maxSpeed,20,110);
+  interval = lerp(abs(speed),0,maxSpeed,20,180);
   if (speed == 0) { //idle smoke behaviour
     if (!doPuff && millis() - lastPuffOff > 250) {
     doPuff = true;
