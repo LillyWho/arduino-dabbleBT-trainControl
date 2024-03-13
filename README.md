@@ -1,6 +1,8 @@
 This project aims to make a simple 5V train control system that includes extra functions. In place of a gamepad, this uses the Dabble app, to emulate a controller with an analogue stick.
 Connectivity is implemented via one of the compatible bluetooth chips, in my case the HC05.
 
+Thanks to the L298N H-Bridge scaling the PWM output proportionally to the Arduino's 5V control signal, this can also be used with any power supply voltage that is electrically supported. However, when using a motor that is rated at a lower voltage than what is available to the h-bridge, make sure to adjust the maxSpeed variable to the percentage of the voltage that your motor supports.
+
 Currently implemented:
 
 - Different control modes, 0 for absolute analogue control forwards and backwards, 1 for throttle-based control, 2 for d-pad control
@@ -13,3 +15,4 @@ Controls:
 - Square: Traction Control Mode Down
 - Circle: Headlights
 - Traction control for various modes should be self-explanatory
+- Cross: Emergency brake toggle. Sets speed to zero and blocks traction control until toggled again
