@@ -9,7 +9,7 @@ const int ledPin2 = 6;
 * motor that can take 12 or 24V, then you can simply set this to 100 in order to allow for a full range duty cycle.
 */
 
-const int maxSpeed = 72; 
+const int maxSpeed = 66; 
 const int Motor1 = 10;
 const int in1 = 9;
 const int in2 = 8;
@@ -109,7 +109,7 @@ void mode0(float value, bool mode0) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
-  analogWrite(Motor1, speed);
+  analogWrite(Motor1, lerp(abs(speed),0,maxSpeed,0,255));
 }
 void mode1(bool mode1) {
   if (!mode1) {return 0;} //quit if we're not in mode 1
@@ -126,7 +126,7 @@ void mode1(bool mode1) {
     throttleTick = millis();
     speed = speed + direction;
   }
-  analogWrite(Motor1, abs(speed));
+  analogWrite(Motor1, lerp(abs(speed),0,maxSpeed,0,255));
 }
 void mode2(bool mode2) {
   if (!mode2) {return 0;}
@@ -150,7 +150,7 @@ void mode2(bool mode2) {
   }
   if (!GamePad.isUpPressed()) {UpDebounce = 0;}
   if (!GamePad.isDownPressed()) {DownDebounce = 0;}
-  analogWrite(Motor1, abs(speed));
+  analogWrite(Motor1, lerp(abs(speed),0,maxSpeed,0,255));
   if (speed > 0) {digitalWrite(in1,HIGH);digitalWrite(in2,LOW);} else if (speed < 0) {digitalWrite(in1,LOW); digitalWrite(in2,HIGH);}
 }
 void modeUp() {
@@ -176,8 +176,8 @@ void steamer(bool steam) {
   }
 }
 void diesel(bool steam) {
-  if (!steam && smokeMode == 0) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;}
-  if (!steam && smokeMode != 0) {return 0;}
+  if (!steam && smokeMode == 0) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;} //if steam isn't enabled and the smoke mode is diesel, exit the function while resetting everything
+  if (!steam && smokeMode != 0) {return 0;} // if steam isn't enabled and smoke mode isn't diesel, just quit leaving the variables untouched, so as to not disturb the other function
   interval = lerp(abs(speed),0,maxSpeed,20,180);
   if (speed == 0) { //idle smoke behaviour
     if (!doPuff && millis() - lastPuffOff > 250) {
