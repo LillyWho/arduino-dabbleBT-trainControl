@@ -9,11 +9,11 @@ const int ledPin2 = 6;
 * motor that can take 12 or 24V, then you can simply set this to 100 in order to allow for a full range duty cycle.
 */
 
-const int maxSpeed = 66; 
+const int maxSpeed = 100; 
 const int Motor1 = 10;
 const int in1 = 9;
 const int in2 = 8;
-const int puffPin = 4;
+const int puffPin = 16;
 const int smokeMode = 0; // CHANGEME: 0 = diesel with closely pulsed smoke, 1 = steam with either constant in idle or puffs per cylinder beat in motion
 static int mode = 0; // mode 0 = absolute analogue, mode 1 = real analogue throttle mode, mode 2 = d-pad incremental mode
 static float directionPlus = 0;
@@ -47,6 +47,7 @@ void setup() {
   pinMode(in2, OUTPUT);
 
   pinMode(ledPin1,OUTPUT);
+  pinMode(puffPin,OUTPUT);
   Serial.begin(9600);
   Dabble.begin(9600);
 }
@@ -65,7 +66,8 @@ void loop() {
   //Serial.print(interval);
   Serial.println(speed);
   //Serial.println(mode);
-  digitalWrite(13,doPuff); //just represent it via the internal LED for now
+  digitalWrite(puffPin,HIGH); //just represent it via the internal LED for now
+  digitalWrite(13,doPuff);
 
   Circle(GamePad.isCirclePressed());
   Square(GamePad.isSquarePressed());
