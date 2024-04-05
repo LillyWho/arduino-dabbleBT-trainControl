@@ -2,20 +2,21 @@
 #define INCLUDE_GAMEPAD_MODULE
 #include <Dabble.h>
 
-const int ledPin1 = 5; //pin D2, wire to GND
-const int ledPin2 = 6;
+const int ledPin1 = 13;  //pin D2, wire to GND
+const int ledPin2 = 20;
 /* CHANGEME: 
 * I've limited the duty cycle in order to accomodate my use case of running a motor that can take a maximum of 4V, but if you intend to operate off a 12 or 24V power supply with a
 * motor that can take 12 or 24V, then you can simply set this to 100 in order to allow for a full range duty cycle.
 */
 
-const int maxSpeed = 100; 
-const int Motor1 = 10;
-const int in1 = 9;
-const int in2 = 8;
+const int maxSpeed = 100;
+const int Motor1 = 12;
+const int in1 = 10;
+const int in2 = 11;
 const int puffPin = 16;
-const int smokeMode = 0; // CHANGEME: 0 = diesel with closely pulsed smoke, 1 = steam with either constant in idle or puffs per cylinder beat in motion
-static int mode = 0; // mode 0 = absolute analogue, mode 1 = real analogue throttle mode, mode 2 = d-pad incremental mode
+const int smokeMode = 0;  // CHANGEME: 0 = diesel with closely pulsed smoke, 1 = steam with either constant in idle or puffs per cylinder beat in motion
+static bool firstStart = true;
+static int mode = 0;  // mode 0 = absolute analogue, mode 1 = real analogue throttle mode, mode 2 = d-pad incremental mode
 static float directionPlus = 0;
 static float directionMinus = 0;
 static float direction = 0;
@@ -46,8 +47,11 @@ void setup() {
   pinMode(in1, OUTPUT);
   pinMode(in2, OUTPUT);
 
-  pinMode(ledPin1,OUTPUT);
-  pinMode(puffPin,OUTPUT);
+  pinMode(ledPin1, OUTPUT);
+  pinMode(puffPin, OUTPUT);
+
+  digitalWrite(in1, HIGH);  // Set direction
+  digitalWrite(in2, LOW);   // Set direction
   Serial.begin(9600);
   Dabble.begin(9600);
 }
@@ -55,69 +59,126 @@ void setup() {
 void loop() {
   Dabble.processInput();
   direction = GamePad.getYaxisData();
-  directionPlus = constrain(direction,0.0,7);
-  directionMinus = constrain(direction,-7.0,0);
+  directionPlus = constrain(direction, 0.0, 7);
+  directionMinus = constrain(direction, -7.0, 0);
   mode0(direction, mode == 0);
   mode1(mode == 1);
   mode2(mode == 2);
   diesel(steamerEnabled);
-  digitalWrite(ledPin1,lightsOn);
+  digitalWrite(ledPin1, lightsOn);
 
   //Serial.print(interval);
-  Serial.println(speed);
+  //Serial.println(speed);
   //Serial.println(mode);
-  digitalWrite(puffPin,HIGH); //just represent it via the internal LED for now
-  digitalWrite(13,doPuff);
+  digitalWrite(puffPin, doPuff);  //just represent it via the internal LED for now
+  digitalWrite(13, doPuff);
 
   Circle(GamePad.isCirclePressed());
   Square(GamePad.isSquarePressed());
   Triangle(GamePad.isTrianglePressed());
   X(GamePad.isCrossPressed());
   Start(GamePad.isStartPressed());
-  
+
+  Serial.println(lerp(abs(speed), 0, maxSpeed, 0, 255));
 }
 
 void Circle(bool pressed) {
-  if (!pressed) {CircleDebounce = 0; return 0;}
-  if (CircleDebounce == 0) {CircleDebounce = millis(); lightsOn == !lightsOn;}
+  if (!pressed) {
+    CircleDebounce = 0;
+    return 0;
+  }
+  if (CircleDebounce == 0) {
+    CircleDebounce = millis();
+    lightsOn == !lightsOn;
+  }
 }
 void Square(bool pressed) {
-  if (!pressed) {SquareDebounce = 0; return 0;}
-  if (SquareDebounce == 0) {SquareDebounce = millis(); modeDown();}
+  if (!pressed) {
+    SquareDebounce = 0;
+    return 0;
+  }
+  if (SquareDebounce == 0) {
+    SquareDebounce = millis();
+    modeDown();
+  }
 }
 void Triangle(bool pressed) {
-  if (!pressed) {TriangleDebounce = 0; return 0;}
-  if (TriangleDebounce == 0) {TriangleDebounce = millis(); modeUp();}
+  if (!pressed) {
+    TriangleDebounce = 0;
+    return 0;
+  }
+  if (TriangleDebounce == 0) {
+    TriangleDebounce = millis();
+    modeUp();
+  }
 }
 void X(bool pressed) {
-  if (!pressed) {XDebounce = 0; return 0;}
-  if (XDebounce == 0) {XDebounce = millis(); emergencyBrake = !emergencyBrake;}
+  if (!pressed) {
+    XDebounce = 0;
+    return 0;
+  }
+  if (XDebounce == 0) {
+    XDebounce = millis();
+    emergencyBrake = !emergencyBrake;
+  }
 }
 void Start(bool pressed) {
-  if (!pressed) {StartDebounce = 0; return 0;}
-  if (StartDebounce == 0) {StartDebounce = millis(); steamerEnabled = !steamerEnabled;}
+  if (!pressed) {
+    StartDebounce = 0;
+    return 0;
+  }
+  if (StartDebounce == 0) {
+    StartDebounce = millis();
+    steamerEnabled = !steamerEnabled;
+  }
 }
 
 void mode0(float value, bool mode0) {
-  if (mode != 0) {return 0;}
-  if (emergencyBrake) {speed = 0;analogWrite(Motor1, speed); return;}
+  if (mode != 0) { return 0; }
+  if (emergencyBrake) {
+    speed = 0;
+    analogWrite(Motor1, speed);
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
+    return;
+  }
   if (directionPlus > 0) {
-    speed = lerp(value,0,7,0,maxSpeed); // map to the axis value if the speed isn't on emergency brake
+    speed = lerp(value, 0, 7, 0, maxSpeed);  // map to the axis value if the speed isn't on emergency brake
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
+    Serial.println("HIGH_LOW");
+  } else if (directionMinus < 0) {
+    speed = lerp(value, 0, 7, 0, maxSpeed);  // map to the axis value if the speed isn't on emergency brake
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+    Serial.println("LOW_HIGH");
+  } else {
+    speed = 0;
+    analogWrite(Motor1, speed);
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
   }
-  else {
-    speed = lerp(value,0,7,0,maxSpeed); // map to the axis value if the speed isn't on emergency brake
+  analogWrite(Motor1, lerp(abs(speed), 0, maxSpeed, 0, 255));
+}
+void mode1(bool mode1) {
+  if (!mode1) { return 0; }  //quit if we're not in mode 1
+  if (emergencyBrake) {
+    speed = 0;
+    analogWrite(Motor1, speed);
+    return 0;
+  }  //just brake if we hit the panic button
+  if (speed == maxSpeed || speed == (maxSpeed * (-1))) {
+    throttleTick = 0;
+    analogWrite(Motor1, speed);
+    return 0;
+  }  //reset tick variable, write to motor and exit
+  if (speed > 0) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
+  } else if (speed < 0) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
   }
-  analogWrite(Motor1, lerp(abs(speed),0,maxSpeed,0,255));
-}
-void mode1(bool mode1) {
-  if (!mode1) {return 0;} //quit if we're not in mode 1
-  if (emergencyBrake) {speed = 0;analogWrite(Motor1, speed); return 0;} //just brake if we hit the panic button
-  if (speed == maxSpeed || speed == (maxSpeed * (-1))) {throttleTick = 0; analogWrite(Motor1, speed); return 0;} //reset tick variable, write to motor and exit
-  if (speed > 0) {digitalWrite(in1,HIGH);digitalWrite(in2,LOW);} else if (speed < 0) {digitalWrite(in1,LOW); digitalWrite(in2,HIGH);}
   if (direction == 0) {
     throttleTick = 0;
     speed = speed + direction;
@@ -128,32 +189,42 @@ void mode1(bool mode1) {
     throttleTick = millis();
     speed = speed + direction;
   }
-  analogWrite(Motor1, lerp(abs(speed),0,maxSpeed,0,255));
+  analogWrite(Motor1, lerp(abs(speed), 0, maxSpeed, 0, 255));
 }
 void mode2(bool mode2) {
-  if (!mode2) {return 0;}
-  if (emergencyBrake) {speed = 0; analogWrite(Motor1, abs(speed)); return;}
+  if (!mode2) { return 0; }
+  if (emergencyBrake) {
+    speed = 0;
+    analogWrite(Motor1, abs(speed));
+    return;
+  }
   if (GamePad.isUpPressed() && speed < maxSpeed) {
     if (UpDebounce == 0) {
-      speed = constrain(speed + 2,maxSpeed * -1, maxSpeed);
+      speed = constrain(speed + 2, maxSpeed * -1, maxSpeed);
       UpDebounce = millis();
     } else if (millis() - UpDebounce > 850) {
-      speed = constrain(speed + 2,maxSpeed * -1, maxSpeed);
+      speed = constrain(speed + 2, maxSpeed * -1, maxSpeed);
       UpDebounce = millis();
     }
   } else if (GamePad.isDownPressed() && speed > maxSpeed * -1) {
     if (DownDebounce == 0) {
-      speed = constrain(speed - 2,maxSpeed * -1, maxSpeed);
+      speed = constrain(speed - 2, maxSpeed * -1, maxSpeed);
       DownDebounce = millis();
     } else if (millis() - DownDebounce > 850) {
-      speed = constrain(speed - 2,maxSpeed * -1, maxSpeed);
+      speed = constrain(speed - 2, maxSpeed * -1, maxSpeed);
       DownDebounce = millis();
     }
   }
-  if (!GamePad.isUpPressed()) {UpDebounce = 0;}
-  if (!GamePad.isDownPressed()) {DownDebounce = 0;}
-  analogWrite(Motor1, lerp(abs(speed),0,maxSpeed,0,255));
-  if (speed > 0) {digitalWrite(in1,HIGH);digitalWrite(in2,LOW);} else if (speed < 0) {digitalWrite(in1,LOW); digitalWrite(in2,HIGH);}
+  if (!GamePad.isUpPressed()) { UpDebounce = 0; }
+  if (!GamePad.isDownPressed()) { DownDebounce = 0; }
+  analogWrite(Motor1, lerp(abs(speed), 0, maxSpeed, 0, 255));
+  if (speed > 0) {
+    digitalWrite(in1, HIGH);
+    digitalWrite(in2, LOW);
+  } else if (speed < 0) {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, HIGH);
+  }
 }
 void modeUp() {
   if (mode == 2) return 0;
@@ -165,9 +236,14 @@ void modeDown() {
 }
 void steamer(bool steam) {
   //TODO: Steam engine timings
-  if (!steam && smokeMode == 1) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;}
-  if (!steam && smokeMode != 1) {return 0;}
-///////////////////////////////////////////////////////////////////////////
+  if (!steam && smokeMode == 1) {
+    doPuff = false;
+    lastPuff = 0;
+    lastPuffOff = 0;
+    return 0;
+  }
+  if (!steam && smokeMode != 1) { return 0; }
+  ///////////////////////////////////////////////////////////////////////////
   if (!doPuff && millis() - lastPuffOff > 5000) {
     doPuff = true;
     lastPuff = millis();
@@ -178,13 +254,18 @@ void steamer(bool steam) {
   }
 }
 void diesel(bool steam) {
-  if (!steam && smokeMode == 0) {doPuff = false; lastPuff = 0; lastPuffOff = 0; return 0;} //if steam isn't enabled and the smoke mode is diesel, exit the function while resetting everything
-  if (!steam && smokeMode != 0) {return 0;} // if steam isn't enabled and smoke mode isn't diesel, just quit leaving the variables untouched, so as to not disturb the other function
-  interval = lerp(abs(speed),0,maxSpeed,20,180);
-  if (speed == 0) { //idle smoke behaviour
+  if (!steam && smokeMode == 0) {
+    doPuff = false;
+    lastPuff = 0;
+    lastPuffOff = 0;
+    return 0;
+  }                                            //if steam isn't enabled and the smoke mode is diesel, exit the function while resetting everything
+  if (!steam && smokeMode != 0) { return 0; }  // if steam isn't enabled and smoke mode isn't diesel, just quit leaving the variables untouched, so as to not disturb the other function
+  interval = lerp(abs(speed), 0, maxSpeed, 20, 180);
+  if (speed == 0) {  //idle smoke behaviour
     if (!doPuff && millis() - lastPuffOff > 250) {
-    doPuff = true;
-    lastPuff = millis();
+      doPuff = true;
+      lastPuff = millis();
     }
     if (doPuff && millis() - lastPuff > 250) {
       doPuff = false;
@@ -202,13 +283,16 @@ void diesel(bool steam) {
   }
 }
 
-float lerp(float x,float x0, float x1, float y0, float y1) {
-    float d = x1 - x0;
-    if (d == 0) {
-        return (y0 + y1) / 2;
-    }
-    return y0 + (x - x0) * (y1 - y0) / d;
+void startDiesel(bool startEngine) {
+  if (!startEngine || !firstStart) { return 0; }
+}
+float lerp(float x, float x0, float x1, float y0, float y1) {
+  float d = x1 - x0;
+  if (d == 0) {
+    return (y0 + y1) / 2;
+  }
+  return y0 + (x - x0) * (y1 - y0) / d;
 }
 int abs(int x) {
-    return (x < 0) ? -x : x;
+  return (x < 0) ? -x : x;
 }
