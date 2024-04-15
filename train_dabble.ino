@@ -2,18 +2,18 @@
 #define INCLUDE_GAMEPAD_MODULE
 #include <Dabble.h>
 
-const int ledPin1 = 13;  //pin D2, wire to GND
-const int ledPin2 = 20;
+const int ledPin1 = 7;  //pin D2, wire to GND
+const int ledPin2 = 6;
 /* CHANGEME: 
 * I've limited the duty cycle in order to accomodate my use case of running a motor that can take a maximum of 4V, but if you intend to operate off a 12 or 24V power supply with a
 * motor that can take 12 or 24V, then you can simply set this to 100 in order to allow for a full range duty cycle.
 */
 
 const int maxSpeed = 100;
-const int Motor1 = 12;
+const int Motor1 = 9;
 const int in1 = 10;
 const int in2 = 11;
-const int puffPin = 16;
+const int puffPin = 8;
 const int smokeMode = 0;  // CHANGEME: 0 = diesel with closely pulsed smoke, 1 = steam with either constant in idle or puffs per cylinder beat in motion
 static bool firstStart = true;
 static int mode = 0;  // mode 0 = absolute analogue, mode 1 = real analogue throttle mode, mode 2 = d-pad incremental mode
@@ -50,8 +50,6 @@ void setup() {
   pinMode(ledPin1, OUTPUT);
   pinMode(puffPin, OUTPUT);
 
-  digitalWrite(in1, HIGH);  // Set direction
-  digitalWrite(in2, LOW);   // Set direction
   Serial.begin(9600);
   Dabble.begin(9600);
 }
@@ -146,12 +144,10 @@ void mode0(float value, bool mode0) {
     speed = lerp(value, 0, 7, 0, maxSpeed);  // map to the axis value if the speed isn't on emergency brake
     digitalWrite(in1, HIGH);
     digitalWrite(in2, LOW);
-    Serial.println("HIGH_LOW");
   } else if (directionMinus < 0) {
     speed = lerp(value, 0, 7, 0, maxSpeed);  // map to the axis value if the speed isn't on emergency brake
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
-    Serial.println("LOW_HIGH");
   } else {
     speed = 0;
     analogWrite(Motor1, speed);
@@ -178,16 +174,21 @@ void mode1(bool mode1) {
   } else if (speed < 0) {
     digitalWrite(in1, LOW);
     digitalWrite(in2, HIGH);
+  } else if (speed == 0) {
+    digitalWrite(in1, LOW);
+    digitalWrite(in2, LOW);
   }
   if (direction == 0) {
     throttleTick = 0;
     speed = speed + direction;
-  } else if (direction != 0 && throttleTick == 0) {
+  } else if (direction != 0 && throttleTick == 0 && ((direction > 0 && speed < maxSpeed) || (direction < 0 && speed > maxSpeed * -1))) {
     throttleTick = millis();
     speed = speed + direction;
   } else if (direction != 0 && millis() - throttleTick > 800) {
     throttleTick = millis();
-    speed = speed + direction;
+    if (speed < maxSpeed) {
+      speed = speed + direction;
+    }
   }
   analogWrite(Motor1, lerp(abs(speed), 0, maxSpeed, 0, 255));
 }
@@ -200,18 +201,18 @@ void mode2(bool mode2) {
   }
   if (GamePad.isUpPressed() && speed < maxSpeed) {
     if (UpDebounce == 0) {
-      speed = constrain(speed + 2, maxSpeed * -1, maxSpeed);
+      speed = constrain(speed + 4, maxSpeed * -1, maxSpeed);
       UpDebounce = millis();
     } else if (millis() - UpDebounce > 850) {
-      speed = constrain(speed + 2, maxSpeed * -1, maxSpeed);
+      speed = constrain(speed + 4, maxSpeed * -1, maxSpeed);
       UpDebounce = millis();
     }
   } else if (GamePad.isDownPressed() && speed > maxSpeed * -1) {
     if (DownDebounce == 0) {
-      speed = constrain(speed - 2, maxSpeed * -1, maxSpeed);
+      speed = constrain(speed - 4, maxSpeed * -1, maxSpeed);
       DownDebounce = millis();
     } else if (millis() - DownDebounce > 850) {
-      speed = constrain(speed - 2, maxSpeed * -1, maxSpeed);
+      speed = constrain(speed - 4, maxSpeed * -1, maxSpeed);
       DownDebounce = millis();
     }
   }
