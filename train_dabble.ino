@@ -2,18 +2,20 @@
 #define INCLUDE_GAMEPAD_MODULE
 #include <Dabble.h>
 
-const int ledPin1 = 7;  //pin D2, wire to GND
-const int ledPin2 = 6;
+const int ledPin1 = 7;  //If it's just one LED, wire anode to pin directly
+const int ledPin2 = 6; //Not used yet. For tail lights later.
+
+
 /* CHANGEME: 
 * I've limited the duty cycle in order to accomodate my use case of running a motor that can take a maximum of 4V, but if you intend to operate off a 12 or 24V power supply with a
 * motor that can take 12 or 24V, then you can simply set this to 100 in order to allow for a full range duty cycle.
+ Make sure to check for things like voltage dropoff in your h-bridge and take those into account.
 */
-
 const int maxSpeed = 100;
-const int Motor1 = 9;
-const int in1 = 10;
-const int in2 = 11;
-const int puffPin = 8;
+const int Motor1 = 9; //PWM speed control for H-Bridge
+const int in1 = 10; //IN1 Pin on L298N, for directional selection
+const int in2 = 11; //IN2
+const int puffPin = 8; //For controlling a sonic humidifier
 const int smokeMode = 0;  // CHANGEME: 0 = diesel with closely pulsed smoke, 1 = steam with either constant in idle or puffs per cylinder beat in motion
 static bool firstStart = true;
 static int mode = 0;  // mode 0 = absolute analogue, mode 1 = real analogue throttle mode, mode 2 = d-pad incremental mode
@@ -180,15 +182,9 @@ void mode1(bool mode1) {
   }
   if (direction == 0) {
     throttleTick = 0;
-    speed = speed + direction;
-  } else if (direction != 0 && throttleTick == 0 && ((direction > 0 && speed < maxSpeed) || (direction < 0 && speed > maxSpeed * -1))) {
+  } else if (direction != 0 && millis() - throttleTick > 200 && ((direction > 0 && speed < maxSpeed) || (direction < 0 && speed > maxSpeed * -1))) {
     throttleTick = millis();
     speed = speed + direction;
-  } else if (direction != 0 && millis() - throttleTick > 800) {
-    throttleTick = millis();
-    if (speed < maxSpeed) {
-      speed = speed + direction;
-    }
   }
   analogWrite(Motor1, lerp(abs(speed), 0, maxSpeed, 0, 255));
 }
