@@ -24,5 +24,5 @@ Parts list:
 - Smartphone
 - L298N H-Bridge
 - 6V LiPol rechargeable battery pack
-- New Ray toy train
+- New Ray or EZTEC toy train
 - 5V Ultrasonic Humidifier off ebay, credit to this video for the idea: https://www.youtube.com/watch?v=SeqZip3bmfQ
